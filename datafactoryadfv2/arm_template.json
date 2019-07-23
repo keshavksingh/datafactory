@@ -1,0 +1,226 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "type": "string",
+            "metadata": "Data Factory Name",
+            "defaultValue": "datafactoryadfv2"
+        },
+        "KeyVault_properties_typeProperties_baseUrl": {
+            "type": "string",
+            "defaultValue": "https://commonKeyVault.vault.azure.net/"
+        },
+        "LS_datastore_properties_typeProperties_connectionString_secretName": {
+            "type": "string",
+            "defaultValue": "datastoreKey"
+        }
+    },
+    "variables": {
+        "factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+    },
+    "resources": [
+        {
+            "name": "[concat(parameters('factoryName'), '/PL_CopyEmp')]",
+            "type": "Microsoft.DataFactory/factories/pipelines",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "activities": [
+                    {
+                        "name": "Copy Data",
+                        "type": "Copy",
+                        "dependsOn": [],
+                        "policy": {
+                            "timeout": "7.00:00:00",
+                            "retry": 0,
+                            "retryIntervalInSeconds": 30,
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "source": {
+                                "type": "DelimitedTextSource",
+                                "storeSettings": {
+                                    "type": "AzureBlobStorageReadSetting",
+                                    "recursive": true
+                                },
+                                "formatSettings": {
+                                    "type": "DelimitedTextReadSetting"
+                                }
+                            },
+                            "sink": {
+                                "type": "DelimitedTextSink",
+                                "storeSettings": {
+                                    "type": "AzureBlobStorageWriteSetting"
+                                },
+                                "formatSettings": {
+                                    "type": "DelimitedTextWriteSetting",
+                                    "quoteAllText": true,
+                                    "fileExtension": ".txt"
+                                }
+                            },
+                            "enableStaging": false
+                        },
+                        "inputs": [
+                            {
+                                "referenceName": "DS_SRC_EMP",
+                                "type": "DatasetReference",
+                                "parameters": {}
+                            }
+                        ],
+                        "outputs": [
+                            {
+                                "referenceName": "DS_TRGT_EMP",
+                                "type": "DatasetReference",
+                                "parameters": {}
+                            }
+                        ]
+                    }
+                ],
+                "annotations": []
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/datasets/DS_SRC_EMP')]",
+                "[concat(variables('factoryId'), '/datasets/DS_TRGT_EMP')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/DS_SRC_EMP')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "LS_datastore",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [],
+                "type": "DelimitedText",
+                "typeProperties": {
+                    "location": {
+                        "type": "AzureBlobStorageLocation",
+                        "fileName": "Employee.csv",
+                        "folderPath": "raw",
+                        "container": "container"
+                    },
+                    "columnDelimiter": ",",
+                    "escapeChar": "\\",
+                    "firstRowAsHeader": true,
+                    "quoteChar": "\""
+                },
+                "schema": [
+                    {
+                        "name": "EmpId",
+                        "type": "String"
+                    },
+                    {
+                        "name": "EmpName",
+                        "type": "String"
+                    },
+                    {
+                        "name": "ManagerId",
+                        "type": "String"
+                    },
+                    {
+                        "name": "DeptId",
+                        "type": "String"
+                    },
+                    {
+                        "name": "Age",
+                        "type": "String"
+                    },
+                    {
+                        "name": "Salary",
+                        "type": "String"
+                    }
+                ]
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/linkedServices/LS_datastore')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/DS_TRGT_EMP')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "LS_datastore",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [],
+                "type": "DelimitedText",
+                "typeProperties": {
+                    "location": {
+                        "type": "AzureBlobStorageLocation",
+                        "fileName": "Employee.csv",
+                        "folderPath": "cooking",
+                        "container": "container"
+                    },
+                    "columnDelimiter": ",",
+                    "escapeChar": "\\",
+                    "firstRowAsHeader": true,
+                    "quoteChar": "\""
+                },
+                "schema": [
+                    {
+                        "type": "String"
+                    },
+                    {
+                        "type": "String"
+                    },
+                    {
+                        "type": "String"
+                    },
+                    {
+                        "type": "String"
+                    },
+                    {
+                        "type": "String"
+                    },
+                    {
+                        "type": "String"
+                    }
+                ]
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/linkedServices/LS_datastore')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/KeyVault')]",
+            "type": "Microsoft.DataFactory/factories/linkedServices",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "annotations": [],
+                "type": "AzureKeyVault",
+                "typeProperties": {
+                    "baseUrl": "[parameters('KeyVault_properties_typeProperties_baseUrl')]"
+                }
+            },
+            "dependsOn": []
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/LS_datastore')]",
+            "type": "Microsoft.DataFactory/factories/linkedServices",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "annotations": [],
+                "type": "AzureBlobStorage",
+                "typeProperties": {
+                    "connectionString": {
+                        "type": "AzureKeyVaultSecret",
+                        "store": {
+                            "referenceName": "KeyVault",
+                            "type": "LinkedServiceReference"
+                        },
+                        "secretName": "[parameters('LS_datastore_properties_typeProperties_connectionString_secretName')]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/linkedServices/KeyVault')]"
+            ]
+        }
+    ]
+}
